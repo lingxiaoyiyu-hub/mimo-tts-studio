@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MMTTS Studio</title>
+  <style>
+    :root {
+      --bg: #f7f9fc;
+      --panel: #fff;
+      --soft: #f4f7fb;
+      --line: #dfe5ee;
+      --text: #111827;
+      --muted: #697386;
+      --blue: #356dff;
+      --violet: #7b61ff;
+      --green: #13a474;
+      --red: #d92d20;
+      --shadow: 0 18px 48px rgba(15, 23, 42, .10);
+      font-size: 14px;
+      font-family: Inter, "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      height: 100vh;
+      color: var(--text);
+      background: radial-gradient(circle at 52% 8%, rgba(53,109,255,.08), transparent 34%), linear-gradient(180deg,#fff 0%,var(--bg) 100%);
+      overflow: hidden;
+    }
+    button, input, textarea, select { font: inherit; }
+    button {
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    button.primary {
+      border: 0;
+      background: linear-gradient(90deg, var(--blue), var(--violet));
+      color: #fff;
+      font-weight: 700;
+    }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      outline: none;
+      background: #fff;
+      color: var(--text);
+    }
+    input, select { height: 38px; padding: 0 12px; }
+    input, select, textarea { font-size: 13px; }
+    textarea { padding: 12px; line-height: 1.65; resize: vertical; }
+    .app {
+      height: 100vh;
+      display: grid;
+      grid-template-columns: 260px minmax(520px,1fr) 350px;
+      min-height: 0;
+    }
+    .sidebar, .settings {
+      background: rgba(255,255,255,.9);
+      backdrop-filter: blur(14px);
+    }
+    .sidebar {
+      border-right: 1px solid var(--line);
+      display: grid;
+      grid-template-rows: 64px auto 1fr auto;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 18px;
+      font-weight: 800;
+      font-size: 16px;
+    }
+    .logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: #111827;
+      color: #fff;
+      font-size: 13px;
+    }
+    .new-chat { padding: 0 14px 14px; }
+    .new-chat button { width: 100%; }
+    .sessions { padding: 0 10px; overflow: auto; }
+    .session {
+      padding: 10px 12px;
+      border-radius: 8px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      cursor: pointer;
+      margin-bottom: 6px;
+      align-items: center;
+    }
+    .session.active {
+      background: #eef4ff;
+      border: 1px solid #cbdafe;
+    }
+    .session-main {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+    }
+    .session strong, .session span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .session-title-input {
+      width: 100%;
+      height: 28px;
+      padding: 0 8px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .session strong { font-size: 14px; }
+    .session span { font-size: 12px; color: var(--muted); }
+    .session-edit {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      opacity: 0;
+      transition: opacity .15s ease;
+    }
+    .session:hover .session-edit,
+    .session.active .session-edit {
+      opacity: 1;
+    }
+    .account {
+      padding: 14px;
+      border-top: 1px solid var(--line);
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 7px;
+      background: var(--green);
+    }
+    .main {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 64px minmax(0, 1fr) auto;
+    }
+    .topbar {
+      border-bottom: 1px solid rgba(223,229,238,.75);
+      background: rgba(255,255,255,.62);
+      backdrop-filter: blur(14px);
+      padding: 0 26px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    h1 { margin: 0; font-size: 18px; letter-spacing: 0; }
+    .model-picker {
+      position: relative;
+      display: inline-block;
+    }
+    .model-trigger {
+      min-width: 276px;
+      padding: 0 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: #fff;
+      font-weight: 700;
+    }
+    .new {
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 5px;
+      background: #eef1ff;
+      color: #605bff;
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      font-weight: 700;
+    }
+    .model-menu {
+      position: absolute;
+      top: 42px;
+      left: 0;
+      width: 320px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      padding: 6px;
+      z-index: 20;
+      display: none;
+    }
+    .model-menu.open { display: block; }
+    .model-option {
+      width: 100%;
+      height: auto;
+      min-height: 58px;
+      border: 0;
+      border-radius: 8px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 9px 10px;
+      text-align: left;
+      background: #fff;
+    }
+    .model-option:hover, .model-option.active {
+      background: #f1f4f9;
+    }
+    .model-option strong {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+    .model-option span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .badge {
+      height: 22px;
+      padding: 0 8px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      background: #eef4ff;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 700;
+      margin-left: 10px;
+    }
+    .messages {
+      min-height: 0;
+      overflow-y: auto;
+      padding: 28px;
+    }
+    .welcome {
+      width: min(780px,100%);
+      margin: 0 auto 28px;
+      text-align: center;
+    }
+    .welcome h2 { margin: 0 0 10px; font-size: 28px; letter-spacing: 0; }
+    .welcome h2 span {
+      background: linear-gradient(90deg,var(--blue),var(--violet));
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+    .welcome p { margin: 0; color: var(--muted); line-height: 1.7; font-size: 13px; }
+    .msg {
+      width: min(840px,100%);
+      margin: 0 auto 16px;
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 12px;
+    }
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #111827;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .avatar.user { background: linear-gradient(135deg,var(--blue),var(--violet)); }
+    .bubble {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,.94);
+      box-shadow: 0 8px 24px rgba(15,23,42,.05);
+      padding: 14px;
+    }
+    .bubble p { margin: 0; line-height: 1.72; white-space: pre-wrap; font-size: 14px; }
+    .audio {
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid #dbe5ff;
+      border-radius: 8px;
+      background: #f8fbff;
+      display: grid;
+      gap: 10px;
+    }
+    .audio audio { width: 100%; }
+    .audio-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .msg-actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .msg-actions button {
+      height: 30px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+    .inline-editor {
+      display: grid;
+      gap: 10px;
+    }
+    .inline-editor textarea {
+      min-height: 140px;
+      background: #fff;
+      resize: vertical;
+    }
+    .inline-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .composer {
+      padding: 18px 28px 24px;
+      background: linear-gradient(180deg, rgba(247,249,252,0), var(--bg) 28%);
+    }
+    .composer-box {
+      width: min(840px,100%);
+      margin: 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      padding: 12px;
+    }
+    .composer textarea { border: 0; min-height: 76px; padding: 4px 2px 10px; }
+    .composer-footer {
+      border-top: 1px solid #edf1f7;
+      padding-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .quick { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill {
+      height: 28px;
+      padding: 0 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      font-size: 12px;
+      color: var(--muted);
+      background: #fff;
+    }
+    .settings {
+      border-left: 1px solid var(--line);
+      display: grid;
+      grid-template-rows: 64px 1fr;
+    }
+    .settings-head {
+      height: 64px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 800;
+    }
+    .settings-body { overflow: auto; padding: 18px; }
+    label { display: block; margin-bottom: 8px; font-size: 12px; color: var(--muted); }
+    .field { margin-bottom: 16px; }
+    .seg {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .seg button { border: 0; border-radius: 0; height: 34px; font-size: 13px; }
+    .seg button.active { background: #111827; color: #fff; font-weight: 700; }
+    .drop {
+      min-height: 92px;
+      border: 1px dashed #b7c1d0;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      background: var(--soft);
+      padding: 12px;
+      font-size: 13px;
+    }
+    .hint { font-size: 12px; color: var(--muted); line-height: 1.6; margin-top: 7px; }
+    .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .hidden { display: none; }
+    .error { color: var(--red); }
+    .modal-mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, .28);
+      display: none;
+      place-items: center;
+      z-index: 50;
+    }
+    .modal-mask.open { display: grid; }
+    .modal {
+      width: min(480px, calc(100vw - 32px));
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    .modal-head, .modal-foot {
+      height: 56px;
+      padding: 0 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+    .modal-foot {
+      border-bottom: 0;
+      border-top: 1px solid var(--line);
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .modal-body { padding: 18px; }
+    @media (max-width: 1180px) {
+      .app { grid-template-columns: 230px 1fr; }
+      .settings { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><div class="logo">MM</div><span>MMTTS Studio</span></div>
+      <div class="new-chat"><button class="primary" id="newSessionBtn">+ 新建配音会话</button></div>
+      <div class="sessions" id="sessions"></div>
+      <div class="account"><span><span class="dot"></span><span id="apiState">等待 API Key</span></span><span>配置保存在浏览器本地</span></div>
+    </aside>
+
+    <section class="main">
+      <header class="topbar">
+        <div class="model-picker">
+          <button class="model-trigger" id="modelTrigger">
+            <span id="modelTitle">MiMo-V2.5-TTS-VoiceClone</span>
+            <span class="new">New</span>
+            <span>⌄</span>
+          </button>
+          <div class="model-menu" id="modelMenu">
+            <button class="model-option" data-mode="tts">
+              <div><strong>MiMo-V2.5-TTS <span class="new">New</span></strong><span>语音合成大模型</span></div>
+              <b></b>
+            </button>
+            <button class="model-option" data-mode="design">
+              <div><strong>MiMo-V2.5-TTS-VoiceDesign <span class="new">New</span></strong><span>音色设计大模型</span></div>
+              <b></b>
+            </button>
+            <button class="model-option active" data-mode="clone">
+              <div><strong>MiMo-V2.5-TTS-VoiceClone <span class="new">New</span></strong><span>音色克隆大模型</span></div>
+              <b>●</b>
+            </button>
+          </div>
+        </div>
+        <div>
+          <button id="apiBtn">API 设置</button>
+          <button id="clearBtn">清空记录</button>
+        </div>
+      </header>
+
+      <div class="messages" id="messages">
+        <div class="welcome">
+          <h2>Xiaomi MiMo <span>语音工作流</span></h2>
+          <p>选择模型和参数后，像聊天一样连续生成配音。每个会话保存一套参数。</p>
+        </div>
+      </div>
+
+      <div class="composer">
+        <div class="composer-box">
+      <textarea id="textInput" placeholder="输入要生成的播报文本"></textarea>
+          <div class="composer-footer">
+            <div></div>
+            <button class="primary" id="generateBtn">生成语音</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="settings">
+      <div class="settings-head"><span id="settingsTitle">音色克隆</span><button id="saveBtn">保存</button></div>
+      <div class="settings-body">
+        <div class="field" id="voiceField">
+          <label>预置音色</label>
+          <select id="voice">
+            <option value="冰糖">冰糖</option>
+            <option value="茉莉">茉莉</option>
+            <option value="苏打">苏打</option>
+            <option value="白桦">白桦</option>
+            <option value="Mia">Mia</option>
+            <option value="Chloe">Chloe</option>
+            <option value="Milo">Milo</option>
+            <option value="Dean">Dean</option>
+            <option value="mimo_default">默认音色</option>
+          </select>
+          <div class="hint">这些是 MiMo 文档列出的内置音色，主要用于 MiMo-V2.5-TTS。</div>
+        </div>
+
+        <div class="field" id="styleField">
+          <div class="row">
+            <label>风格指令</label>
+            <button id="genStyleBtn">生成</button>
+          </div>
+          <textarea id="stylePrompt" rows="4" placeholder="描述这段声音应该怎么读。比如：语速稍快，语气自然亲切，像短视频开场；或者：沉稳克制，适合纪录片旁白。"></textarea>
+          <div class="hint">可写语速、语气、情绪、场景、角色感。点“生成”会根据播报文本自动生成一条配音风格。</div>
+        </div>
+
+        <div class="field hidden" id="designField">
+          <div class="row">
+            <label>音色描述</label>
+            <button id="genVoiceBtn">生成</button>
+          </div>
+          <textarea id="voiceDescription" rows="5" placeholder="比如：青年女性，声音明亮，有亲和力，适合新闻直播"></textarea>
+        </div>
+
+        <div class="field hidden" id="cloneField">
+          <label>克隆音频</label>
+          <input id="voiceFile" type="file" accept=".mp3,.wav,audio/mpeg,audio/wav" />
+          <div class="hint">请上传 5-30 秒、10MB 以内的 mp3/wav。</div>
+        </div>
+
+        <div class="field">
+          <div class="row">
+            <label>播报文本辅助</label>
+            <button id="genTextBtn">优化</button>
+          </div>
+          <div class="hint">会用 MiMo 大模型优化当前输入框文本。</div>
+        </div>
+
+        <div class="field">
+          <label>输出格式</label>
+          <select id="outputFormat">
+            <option>wav</option>
+            <option>mp3</option>
+          </select>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="modal-mask" id="apiModal">
+    <div class="modal">
+      <div class="modal-head">
+        <strong>API 设置</strong>
+        <button id="closeApiBtn">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Base URL</label>
+          <input id="baseUrl" value="https://token-plan-sgp.xiaomimimo.com/v1" />
+        </div>
+        <div class="field">
+          <label>API Key</label>
+          <input id="apiKey" type="password" placeholder="tp-..." />
+          <div class="hint">只保存在浏览器本地，用于直接调用你的 MiMo API。</div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button id="cancelApiBtn">取消</button>
+        <button class="primary" id="saveApiBtn">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      mode: 'clone',
+      sessions: JSON.parse(localStorage.getItem('mmtts.sessions') || '[]'),
+      active: localStorage.getItem('mmtts.active') || '',
+    };
+
+    const modelByMode = {
+      tts: 'mimo-v2.5-tts',
+      design: 'mimo-v2.5-tts-voicedesign',
+      clone: 'mimo-v2.5-tts-voiceclone',
+    };
+
+    const els = {
+      sessions: document.getElementById('sessions'),
+      messages: document.getElementById('messages'),
+      sessionTitle: document.getElementById('sessionTitle'),
+      modelBadge: document.getElementById('modelBadge'),
+      baseUrl: document.getElementById('baseUrl'),
+      apiKey: document.getElementById('apiKey'),
+      voice: document.getElementById('voice'),
+      stylePrompt: document.getElementById('stylePrompt'),
+      voiceDescription: document.getElementById('voiceDescription'),
+      voiceFile: document.getElementById('voiceFile'),
+      outputFormat: document.getElementById('outputFormat'),
+      textInput: document.getElementById('textInput'),
+      generateBtn: document.getElementById('generateBtn'),
+      apiState: document.getElementById('apiState'),
+      modelTitle: document.getElementById('modelTitle'),
+      modelMenu: document.getElementById('modelMenu'),
+      settingsTitle: document.getElementById('settingsTitle'),
+      apiModal: document.getElementById('apiModal'),
+      voiceField: document.getElementById('voiceField'),
+      styleField: document.getElementById('styleField'),
+      designField: document.getElementById('designField'),
+      cloneField: document.getElementById('cloneField'),
+    };
+
+    init();
+
+    function init() {
+      if (!state.sessions.length) {
+        const id = crypto.randomUUID();
+        state.sessions.push({ id, title: '我的旁白声', mode: 'clone', messages: [] });
+        state.active = id;
+      }
+      loadSettings();
+      renderSessions();
+      renderMessages();
+      bindEvents();
+      applyMode(getActive().mode || 'clone');
+    }
+
+    function bindEvents() {
+      document.getElementById('modelTrigger').onclick = () => els.modelMenu.classList.toggle('open');
+      document.querySelectorAll('.model-option').forEach(btn => {
+        btn.onclick = () => {
+          applyMode(btn.dataset.mode);
+          els.modelMenu.classList.remove('open');
+        };
+      });
+      document.addEventListener('click', (event) => {
+        if (!event.target.closest('.model-picker')) els.modelMenu.classList.remove('open');
+      });
+      document.getElementById('apiBtn').onclick = () => els.apiModal.classList.add('open');
+      document.getElementById('closeApiBtn').onclick = () => els.apiModal.classList.remove('open');
+      document.getElementById('cancelApiBtn').onclick = () => els.apiModal.classList.remove('open');
+      document.getElementById('saveApiBtn').onclick = () => {
+        saveSettings();
+        els.apiModal.classList.remove('open');
+      };
+      document.getElementById('newSessionBtn').onclick = () => {
+        const id = crypto.randomUUID();
+        state.sessions.unshift({ id, title: '新配音会话', mode: state.mode, messages: [] });
+        state.active = id;
+        saveState();
+        renderSessions();
+        renderMessages();
+      };
+      document.getElementById('clearBtn').onclick = () => {
+        getActive().messages = [];
+        saveState();
+        renderMessages();
+      };
+      document.getElementById('saveBtn').onclick = saveSettings;
+      els.generateBtn.onclick = generate;
+      document.getElementById('genStyleBtn').onclick = () => assist('style', els.stylePrompt, els.textInput.value);
+      document.getElementById('genVoiceBtn').onclick = () => assist('voice', els.voiceDescription, els.textInput.value);
+      document.getElementById('genTextBtn').onclick = () => assist('text', els.textInput, els.textInput.value);
+      els.apiKey.oninput = () => els.apiState.textContent = els.apiKey.value ? 'API 已填写' : '等待 API Key';
+    }
+
+    function applyMode(mode) {
+      state.mode = mode;
+      getActive().mode = mode;
+      document.querySelectorAll('.model-option').forEach(btn => {
+        const active = btn.dataset.mode === mode;
+        btn.classList.toggle('active', active);
+        btn.querySelector('b').textContent = active ? '●' : '';
+      });
+      els.voiceField.classList.toggle('hidden', mode !== 'tts');
+      els.styleField.classList.toggle('hidden', mode === 'design');
+      els.designField.classList.toggle('hidden', mode !== 'design');
+      els.cloneField.classList.toggle('hidden', mode !== 'clone');
+      els.modelTitle.textContent = modelLabel(mode);
+      els.settingsTitle.textContent = settingsTitle(mode);
+      saveState();
+      renderSessions();
+    }
+
+    async function assist(kind, target, text) {
+      saveSettings();
+      target.value = '生成中...';
+      const res = await fetch('/api/assist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: els.apiKey.value,
+          base_url: els.baseUrl.value,
+          kind,
+          text,
+        }),
+      }).then(r => r.json()).catch(e => ({ ok: false, message: e.message }));
+      target.value = res.ok ? res.text : `生成失败：${res.message}`;
+    }
+
+    async function generate() {
+      const text = els.textInput.value.trim();
+      if (!text) return alert('请输入播报文本');
+      await generateForText(text);
+      els.textInput.value = '';
+    }
+
+    async function generateForText(text, userIndex = null) {
+      saveSettings();
+      const session = getActive();
+      let assistantIndex;
+
+      if (userIndex === null) {
+        session.messages.push({ role: 'user', text, id: crypto.randomUUID() });
+        session.messages.push({ role: 'assistant', text: '正在生成语音...', loading: true });
+        assistantIndex = session.messages.length - 1;
+      } else {
+        session.messages[userIndex].text = text;
+        session.messages[userIndex].editing = false;
+        assistantIndex = userIndex + 1;
+        if (!session.messages[assistantIndex] || session.messages[assistantIndex].role !== 'assistant') {
+          session.messages.splice(assistantIndex, 0, { role: 'assistant', text: '正在生成语音...', loading: true });
+        } else {
+          session.messages[assistantIndex] = { role: 'assistant', text: '正在重新生成语音...', loading: true };
+        }
+      }
+
+      saveState();
+      renderMessages();
+
+      const form = new FormData();
+      form.append('api_key', els.apiKey.value);
+      form.append('base_url', els.baseUrl.value);
+      form.append('model', modelByMode[state.mode]);
+      form.append('voice', els.voice.value);
+      form.append('style_prompt', buildStylePrompt());
+      form.append('voice_description', els.voiceDescription.value);
+      form.append('text', text);
+      form.append('output_format', els.outputFormat.value);
+      if (state.mode === 'clone' && els.voiceFile.files[0]) {
+        form.append('voice_file', els.voiceFile.files[0]);
+      }
+
+      els.generateBtn.disabled = true;
+      const res = await fetch('/api/tts', { method: 'POST', body: form })
+        .then(r => r.json())
+        .catch(e => ({ ok: false, message: e.message }));
+      els.generateBtn.disabled = false;
+
+      const last = session.messages[assistantIndex];
+      delete last.loading;
+      if (res.ok) {
+        last.text = `已生成：${modelByMode[state.mode]}`;
+        last.audioUrl = res.url;
+        last.filename = res.filename;
+      } else {
+        last.text = `生成失败：${res.message}`;
+        last.error = true;
+      }
+      saveState();
+      renderMessages();
+    }
+
+    function renderSessions() {
+      els.sessions.innerHTML = '';
+      state.sessions.forEach(s => {
+        const div = document.createElement('div');
+        div.className = `session ${s.id === state.active ? 'active' : ''}`;
+        div.innerHTML = `<div class="session-main">${s.renaming ? `<input class="session-title-input" data-title-input="${s.id}" value="${escapeHtml(s.title)}" />` : `<strong>${escapeHtml(s.title)}</strong>`}<span>${modeName(s.mode || 'clone')} · ${s.messages.length} 条</span></div><button class="session-edit" title="重命名" data-rename="${s.id}">✎</button>`;
+        div.onclick = (event) => {
+          if (event.target.closest('[data-rename]')) return;
+          state.active = s.id;
+          applyMode(s.mode || 'clone');
+          saveState();
+          renderSessions();
+          renderMessages();
+        };
+        els.sessions.appendChild(div);
+      });
+      els.sessions.querySelectorAll('[data-rename]').forEach(btn => {
+        btn.onclick = () => {
+          const session = state.sessions.find(s => s.id === btn.dataset.rename);
+          if (!session) return;
+          session.renaming = true;
+          saveState();
+          renderSessions();
+          const input = els.sessions.querySelector(`[data-title-input="${session.id}"]`);
+          input?.focus();
+          input?.select();
+        };
+      });
+      els.sessions.querySelectorAll('[data-title-input]').forEach(input => {
+        const finish = (save) => {
+          const session = state.sessions.find(s => s.id === input.dataset.titleInput);
+          if (!session) return;
+          if (save) {
+            const next = input.value.trim();
+            if (next) session.title = next;
+          }
+          session.renaming = false;
+          saveState();
+          renderSessions();
+          renderMessages(false);
+        };
+        input.onblur = () => finish(true);
+        input.onkeydown = (event) => {
+          if (event.key === 'Enter') finish(true);
+          if (event.key === 'Escape') finish(false);
+        };
+        input.onclick = event => event.stopPropagation();
+      });
+    }
+
+    function renderMessages(scrollToBottom = true) {
+      const prevScrollTop = els.messages.scrollTop;
+      const session = getActive();
+      const welcome = `<div class="welcome"><h2>Xiaomi MiMo <span>语音工作流</span></h2><p>选择模型和参数后，像聊天一样连续生成配音。</p></div>`;
+      els.messages.innerHTML = welcome + session.messages.map((m, index) => `
+        <div class="msg">
+          <div class="avatar ${m.role === 'user' ? 'user' : ''}">${m.role === 'user' ? '你' : 'AI'}</div>
+          <div class="bubble ${m.error ? 'error' : ''}">
+            ${m.editing ? `
+              <div class="inline-editor">
+                <textarea data-edit-text="${index}"></textarea>
+                <div class="inline-actions">
+                  <button data-cancel-edit="${index}">取消</button>
+                  <button class="primary" data-resend-index="${index}">重发</button>
+                </div>
+              </div>
+            ` : `<p>${escapeHtml(m.text)}</p>`}
+            ${m.role === 'user' && !m.editing ? `<div class="msg-actions"><button data-edit-index="${index}">编辑</button></div>` : ''}
+            ${m.audioUrl ? `<div class="audio"><audio controls src="${m.audioUrl}"></audio><div class="audio-actions"><a href="${m.audioUrl}" download="${m.filename}"><button>下载</button></a></div></div>` : ''}
+          </div>
+        </div>
+      `).join('');
+      els.messages.querySelectorAll('[data-edit-index]').forEach(btn => {
+        btn.onclick = () => {
+          session.messages[Number(btn.dataset.editIndex)].editing = true;
+          saveState();
+          renderMessages(false);
+        };
+      });
+      els.messages.querySelectorAll('[data-cancel-edit]').forEach(btn => {
+        btn.onclick = () => {
+          session.messages[Number(btn.dataset.cancelEdit)].editing = false;
+          saveState();
+          renderMessages(false);
+        };
+      });
+      els.messages.querySelectorAll('[data-resend-index]').forEach(btn => {
+        btn.onclick = async () => {
+          const index = Number(btn.dataset.resendIndex);
+          const editor = els.messages.querySelector(`[data-edit-text="${index}"]`);
+          const text = editor.value.trim();
+          if (!text) return alert('文本不能为空');
+          await generateForText(text, index);
+        };
+      });
+      els.messages.querySelectorAll('[data-edit-text]').forEach(area => {
+        const msg = session.messages[Number(area.dataset.editText)];
+        area.value = msg?.text || '';
+        autosize(area);
+        area.oninput = () => autosize(area);
+      });
+      if (scrollToBottom) {
+        els.messages.scrollTop = els.messages.scrollHeight;
+      } else {
+        els.messages.scrollTop = prevScrollTop;
+      }
+    }
+
+    function autosize(area) {
+      area.style.height = 'auto';
+      area.style.height = Math.max(area.scrollHeight + 4, 140) + 'px';
+    }
+
+    function getActive() {
+      let session = state.sessions.find(s => s.id === state.active);
+      if (!session) {
+        session = state.sessions[0];
+        state.active = session.id;
+      }
+      return session;
+    }
+
+    function saveState() {
+      localStorage.setItem('mmtts.sessions', JSON.stringify(state.sessions));
+      localStorage.setItem('mmtts.active', state.active);
+    }
+
+    function saveSettings() {
+      localStorage.setItem('mmtts.settings', JSON.stringify({
+        baseUrl: els.baseUrl.value,
+        apiKey: els.apiKey.value,
+        voice: els.voice.value,
+        stylePrompt: els.stylePrompt.value,
+        voiceDescription: els.voiceDescription.value,
+        outputFormat: els.outputFormat.value,
+      }));
+      els.apiState.textContent = els.apiKey.value ? 'API 已填写' : '等待 API Key';
+    }
+
+    function loadSettings() {
+      const data = JSON.parse(localStorage.getItem('mmtts.settings') || '{}');
+      els.baseUrl.value = data.baseUrl || els.baseUrl.value;
+      els.apiKey.value = data.apiKey || '';
+      const validVoice = data.voice && [...els.voice.options].some(o => o.value === data.voice);
+      els.voice.value = validVoice && data.voice !== '白桦' ? data.voice : '冰糖';
+      els.stylePrompt.value = data.stylePrompt || '自然、清晰、略带亲和力。';
+      els.voiceDescription.value = data.voiceDescription || '';
+      els.outputFormat.value = data.outputFormat || 'wav';
+      els.apiState.textContent = els.apiKey.value ? 'API 已填写' : '等待 API Key';
+    }
+
+    function modeName(mode) {
+      return { tts: 'TTS', design: 'VoiceDesign', clone: 'VoiceClone' }[mode] || mode;
+    }
+
+    function buildStylePrompt() {
+      return els.stylePrompt.value.trim();
+    }
+
+    function modelLabel(mode) {
+      return {
+        tts: 'MiMo-V2.5-TTS',
+        design: 'MiMo-V2.5-TTS-VoiceDesign',
+        clone: 'MiMo-V2.5-TTS-VoiceClone'
+      }[mode] || mode;
+    }
+
+    function settingsTitle(mode) {
+      return {
+        tts: '语音合成',
+        design: '音色设计',
+        clone: '音色克隆'
+      }[mode] || '参数';
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
+    }
+  </script>
+</body>
+</html>
