@@ -4,6 +4,10 @@
 
 它可以使用你自己的小米 MiMo API Key，在本地浏览器里调用 MiMo 语音合成、音色设计和音色克隆能力。
 
+## 截图
+
+![MMTTS Studio 界面截图](docs/screenshot.png)
+
 ## 功能
 
 - 支持 `mimo-v2.5-tts`
